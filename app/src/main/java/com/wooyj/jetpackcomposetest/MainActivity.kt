@@ -1,7 +1,6 @@
 package com.wooyj.jetpackcomposetest
 
 import android.os.Bundle
-import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
@@ -14,23 +13,16 @@ import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.AlignmentLine
-import androidx.compose.ui.layout.FirstBaseline
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.semantics.Role.Companion.Image
+import androidx.compose.ui.layout.*
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import coil.compose.rememberImagePainter
 import com.wooyj.jetpackcomposetest.ui.theme.JetpackComposeTestTheme
 import kotlinx.coroutines.launch
@@ -119,6 +111,7 @@ fun BodyContent(modifier: Modifier = Modifier) {
             }
         }
     }
+
 }
 
 // List는 column, row로 그림.
@@ -227,7 +220,15 @@ fun TextWithNormalPaddingPreview() {
 }
 
 
-// layout composable 사용하기
+/**
+ *
+ * 맞춤 레이아웃 만들기.
+ *
+ * - Compose UI는 단일 패스 측정만 가능. (레이아웃 요소가 다른 측정 구성을 시도하기 위해 하위 요소를 두 번 이상 측정할 수가 없음.)
+ * - 상위요소 하나에 하위요소는 여러개 있을 수 있음.. 위치, 크기 포함..
+ * - constraint 요소는 최소/최대 width, height를 제한.
+ *
+ * */
 @Composable
 fun MyOwnColumn(modifier: Modifier, content: @Composable () -> Unit) {
     Layout(
@@ -252,7 +253,14 @@ fun MyOwnColumn(modifier: Modifier, content: @Composable () -> Unit) {
 }
 
 
-// 복잡한 맞춤 레이아웃 만들기
+/**
+ *
+ *  복잡한 맞춤 레이아웃 만들기
+ *
+ *
+ *
+ *
+ */
 @Composable
 fun StaggeredGrid(
     modifier: Modifier,
@@ -263,9 +271,13 @@ fun StaggeredGrid(
         modifier = modifier,
         content = content
     ) { measurables, constraints ->
+
+        // 각 열의 width 추적
         val rowWidths = IntArray(rows) { 0 }
+        // 각 열의 height 추적
         val rowHeights = IntArray(rows) { 0 }
 
+        // 각 요소들의 주어진 width, height 와 같은 제약조건들을 측정함.
         val placeables = measurables.mapIndexed { index, measurable ->
             val placeable = measurable.measure(constraints)
 
@@ -276,26 +288,27 @@ fun StaggeredGrid(
             placeable
         }
 
-        // Grid's width is the widest row
+        // Grid의 너비는 가장 넓은 열
         val width = rowWidths.maxOrNull()
             ?.coerceIn(constraints.minWidth.rangeTo(constraints.maxWidth)) ?: constraints.minWidth
 
-        // Grid's height is the sum of the tallest element of each row
+        // Grid의 높이는 각 열의 가장 긴 요소들의 합을 높이값으르 강제함.
         // coerced to the height constraints
         val height = rowHeights.sumOf { it }
             .coerceIn(constraints.minHeight.rangeTo(constraints.maxHeight))
 
-        // Y of each row, based on the height accumulation of previous rows
+        // 각 열의 Y값, 이전 열의 Y값에 기반해서 정의
         val rowY = IntArray(rows) { 0 }
         for (i in 1 until rows) {
             rowY[i] = rowY[i - 1] + rowHeights[i - 1]
         }
 
-        // Set the size of the parent layout
+        // 부모 레이아웃의 사이즈 설정
         layout(width, height) {
-            // x cord we have placed up to, per row
+            // 열당 최대 X의 갯수
             val rowX = IntArray(rows) { 0 }
 
+            // 각 요소들의 X, Y값을 위치시킴
             placeables.forEachIndexed { index, placeable ->
                 val row = index % rows
                 placeable.placeRelative(
@@ -383,3 +396,50 @@ val topics = listOf(
     Pair("TV", 424),
     Pair("Writing", 34),
 )
+
+
+/**
+ *
+ * LayoutModifier.
+ *
+ *
+ */
+
+@Stable
+fun Modifier.padding(all: Dp) = this.then(
+    PaddingModifier(
+        start = all, top = all, end = all, bottom = all, rtlAware = true
+    )
+)
+
+// LayoutModifier를 상속한 private class
+private class PaddingModifier(
+    val start: Dp = 0.dp,
+    val top: Dp = 0.dp,
+    val end: Dp = 0.dp,
+    val bottom: Dp = 0.dp,
+    val rtlAware: Boolean,
+) : LayoutModifier {
+
+    override fun MeasureScope.measure(
+        measurable: Measurable,
+        constraints: Constraints
+    ): MeasureResult {
+
+        val horizontal = start.roundToPx() + end.roundToPx()
+        val vertical = top.roundToPx() + bottom.roundToPx()
+
+        val placeable = measurable.measure(constraints.offset(-horizontal, -vertical))
+
+        val width = constraints.constrainWidth(placeable.width + horizontal)
+        val height = constraints.constrainHeight(placeable.height + vertical)
+        return layout(width, height) {
+            if (rtlAware) {
+                placeable.placeRelative(start.roundToPx(), top.roundToPx())
+            } else {
+                placeable.place(start.roundToPx(), top.roundToPx())
+            }
+        }
+    }
+
+}
