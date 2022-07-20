@@ -24,8 +24,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
-import androidx.constraintlayout.compose.ChainStyle
-import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.*
 import coil.compose.rememberImagePainter
 import com.wooyj.jetpackcomposetest.ui.theme.JetpackComposeTestTheme
 import kotlinx.coroutines.launch
@@ -474,7 +473,7 @@ fun ConstraintLayoutContent() {
 
         val barrier = createEndBarrier(button1, text)
         val chainRefs = createHorizontalChain(button1, button2, chainStyle = ChainStyle.Packed)
-        constrain(chainRefs){
+        constrain(chainRefs) {
             start.linkTo(parent.start)
             end.linkTo(parent.end)
         }
@@ -504,10 +503,65 @@ fun ConstraintLayoutContent() {
     }
 }
 
+
+@Composable
+fun LargeConstraintLayout() {
+    ConstraintLayout {
+        val text = createRef()
+        val guideline = createGuidelineFromStart(fraction = 0.5f)
+        Text(text = "어어어어어어어어어어어어어어어엄처어어어어어어엉기이이이이이이이인", Modifier.constrainAs(text) {
+            linkTo(start = guideline, end = parent.end)
+            width = Dimension.preferredWrapContent.atLeast(50.dp)
+        })
+
+    }
+}
+
+
+@Composable
+fun DecoupledConstraintLayout() {
+    BoxWithConstraints {
+        val constraints = if (maxWidth < maxHeight) {
+            decoupledConstraints(16.dp)
+        } else {
+            decoupledConstraints(32.dp)
+        }
+
+        ConstraintLayout(constraints) {
+            Button(
+                onClick = {},
+                modifier = Modifier.layoutId("button")
+            ){
+                Text(text = "버튼")
+            }
+            Text("텍스트", Modifier.layoutId("text"))
+        }
+
+    }
+}
+
+
+private fun decoupledConstraints(margin: Dp): ConstraintSet {
+    return ConstraintSet {
+        val button = createRefFor("button")
+        val text = createRefFor("text")
+
+        constrain(button) {
+            top.linkTo(parent.top, margin = margin)
+        }
+        constrain(text) {
+            top.linkTo(button.bottom, margin = margin)
+        }
+    }
+}
+
+
 @Preview
 @Composable
 fun ConstraintLayoutContentPreview() {
     JetpackComposeTestTheme {
-        ConstraintLayoutContent()
+//        ConstraintLayoutContent()
+//        LargeConstraintLayout()
+        DecoupledConstraintLayout()
     }
 }
