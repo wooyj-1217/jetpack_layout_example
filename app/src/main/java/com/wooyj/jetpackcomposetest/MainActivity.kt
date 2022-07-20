@@ -18,11 +18,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.*
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
+import androidx.constraintlayout.compose.ChainStyle
+import androidx.constraintlayout.compose.ConstraintLayout
 import coil.compose.rememberImagePainter
 import com.wooyj.jetpackcomposetest.ui.theme.JetpackComposeTestTheme
 import kotlinx.coroutines.launch
@@ -104,8 +107,16 @@ fun BodyContent(modifier: Modifier = Modifier) {
 //        Text("MyOwnColumn")
 //
 //    }
-    Row(modifier = modifier.horizontalScroll(rememberScrollState())) {
-        StaggeredGrid(modifier = modifier, rows = 3) {
+//    Row(modifier = modifier.horizontalScroll(rememberScrollState())) {
+    Row(
+        modifier = modifier
+//            .background(color = Color.LightGray, shape = RectangleShape)
+            .background(color = Color.LightGray)
+            .padding(16.dp)
+            .size(200.dp)
+            .horizontalScroll(rememberScrollState())
+    ) {
+        StaggeredGrid {
             for (topic in topics) {
                 Chip(modifier = Modifier.padding(8.dp), text = topic.first, count = topic.second)
             }
@@ -263,7 +274,7 @@ fun MyOwnColumn(modifier: Modifier, content: @Composable () -> Unit) {
  */
 @Composable
 fun StaggeredGrid(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     rows: Int = 3,
     content: @Composable () -> Unit
 ) {
@@ -272,15 +283,19 @@ fun StaggeredGrid(
         content = content
     ) { measurables, constraints ->
 
-        // 각 열의 width 추적
+        // Keep track of the width of each row
         val rowWidths = IntArray(rows) { 0 }
-        // 각 열의 height 추적
+
+        // Keep track of the max height of each row
         val rowHeights = IntArray(rows) { 0 }
 
-        // 각 요소들의 주어진 width, height 와 같은 제약조건들을 측정함.
+        // Don't constrain child views further, measure them with given constraints
+        // List of measured children
         val placeables = measurables.mapIndexed { index, measurable ->
+            // Measure each child
             val placeable = measurable.measure(constraints)
 
+            // Track the width and max height of each row
             val row = index % rows
             rowWidths[row] += placeable.width
             rowHeights[row] = Math.max(rowHeights[row], placeable.height)
@@ -288,27 +303,26 @@ fun StaggeredGrid(
             placeable
         }
 
-        // Grid의 너비는 가장 넓은 열
+        // Grid's width is the widest row
         val width = rowWidths.maxOrNull()
             ?.coerceIn(constraints.minWidth.rangeTo(constraints.maxWidth)) ?: constraints.minWidth
 
-        // Grid의 높이는 각 열의 가장 긴 요소들의 합을 높이값으르 강제함.
+        // Grid's height is the sum of the tallest element of each row
         // coerced to the height constraints
         val height = rowHeights.sumOf { it }
             .coerceIn(constraints.minHeight.rangeTo(constraints.maxHeight))
 
-        // 각 열의 Y값, 이전 열의 Y값에 기반해서 정의
+        // Y of each row, based on the height accumulation of previous rows
         val rowY = IntArray(rows) { 0 }
         for (i in 1 until rows) {
             rowY[i] = rowY[i - 1] + rowHeights[i - 1]
         }
 
-        // 부모 레이아웃의 사이즈 설정
+        // Set the size of the parent layout
         layout(width, height) {
-            // 열당 최대 X의 갯수
+            // x co-ord we have placed up to, per row
             val rowX = IntArray(rows) { 0 }
 
-            // 각 요소들의 X, Y값을 위치시킴
             placeables.forEachIndexed { index, placeable ->
                 val row = index % rows
                 placeable.placeRelative(
@@ -401,45 +415,99 @@ val topics = listOf(
 /**
  *
  * LayoutModifier.
- *
+ * >> 아래 코드는 에러뜸.
+ * Inheritance from an interface with '@JvmDefault' members is only allowed with -Xjvm-default option
  *
  */
 
-@Stable
-fun Modifier.padding(all: Dp) = this.then(
-    PaddingModifier(
-        start = all, top = all, end = all, bottom = all, rtlAware = true
-    )
-)
+//@Stable
+//fun Modifier.padding(all: Dp) = this.then(
+//    PaddingModifier(
+//        start = all, top = all, end = all, bottom = all, rtlAware = true
+//    )
+//)
+//
+//// LayoutModifier를 상속한 private class
+//// Implementation detail
+//private class PaddingModifier(
+//    val start: Dp = 0.dp,
+//    val top: Dp = 0.dp,
+//    val end: Dp = 0.dp,
+//    val bottom: Dp = 0.dp,
+//    val rtlAware: Boolean,
+//) : LayoutModifier {
+//
+//    override fun MeasureScope.measure(
+//        measurable: Measurable,
+//        constraints: Constraints
+//    ): MeasureResult {
+//
+//        val horizontal = start.roundToPx() + end.roundToPx()
+//        val vertical = top.roundToPx() + bottom.roundToPx()
+//
+//        val placeable = measurable.measure(constraints.offset(-horizontal, -vertical))
+//
+//        val width = constraints.constrainWidth(placeable.width + horizontal)
+//        val height = constraints.constrainHeight(placeable.height + vertical)
+//        return layout(width, height) {
+//            if (rtlAware) {
+//                placeable.placeRelative(start.roundToPx(), top.roundToPx())
+//            } else {
+//                placeable.place(start.roundToPx(), top.roundToPx())
+//            }
+//        }
+//    }
+//}
 
-// LayoutModifier를 상속한 private class
-private class PaddingModifier(
-    val start: Dp = 0.dp,
-    val top: Dp = 0.dp,
-    val end: Dp = 0.dp,
-    val bottom: Dp = 0.dp,
-    val rtlAware: Boolean,
-) : LayoutModifier {
 
-    override fun MeasureScope.measure(
-        measurable: Measurable,
-        constraints: Constraints
-    ): MeasureResult {
+@Composable
+fun ConstraintLayoutContent() {
+    ConstraintLayout {
+//        val (button, text) = createRefs()
+        val (button1, button2, text) = createRefs()
 
-        val horizontal = start.roundToPx() + end.roundToPx()
-        val vertical = top.roundToPx() + bottom.roundToPx()
-
-        val placeable = measurable.measure(constraints.offset(-horizontal, -vertical))
-
-        val width = constraints.constrainWidth(placeable.width + horizontal)
-        val height = constraints.constrainHeight(placeable.height + vertical)
-        return layout(width, height) {
-            if (rtlAware) {
-                placeable.placeRelative(start.roundToPx(), top.roundToPx())
-            } else {
-                placeable.place(start.roundToPx(), top.roundToPx())
-            }
+        Button(onClick = {}, modifier = Modifier.constrainAs(button1) {
+            top.linkTo(parent.top, margin = 16.dp)
+        }) {
+            Text("버튼1")
         }
-    }
 
+        val barrier = createEndBarrier(button1, text)
+        val chainRefs = createHorizontalChain(button1, button2, chainStyle = ChainStyle.Packed)
+        constrain(chainRefs){
+            start.linkTo(parent.start)
+            end.linkTo(parent.end)
+        }
+
+        Button(onClick = {}, modifier = Modifier.constrainAs(button2) {
+            top.linkTo(parent.top, margin = 16.dp)
+//            start.linkTo(barrier)
+
+        }) {
+            Text("버튼2")
+        }
+        Text("텍스트", Modifier.constrainAs(text) {
+            top.linkTo(button1.bottom, margin = 16.dp)
+            centerAround(button1.end)
+        })
+
+//        Button(onClick = {}, modifier = Modifier.constrainAs(button) {
+//            top.linkTo(parent.top, margin = 16.dp)
+//        }) {
+//            Text("버튼")
+//        }
+//        Text("텍스트", Modifier.constrainAs(text){
+//            top.linkTo(button.bottom, margin = 16.dp)
+//            centerHorizontallyTo(parent)
+//        })
+
+    }
+}
+
+@Preview
+@Composable
+fun ConstraintLayoutContentPreview() {
+    JetpackComposeTestTheme {
+        ConstraintLayoutContent()
+    }
 }
