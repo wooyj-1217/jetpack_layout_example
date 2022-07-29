@@ -531,7 +531,7 @@ fun DecoupledConstraintLayout() {
             Button(
                 onClick = {},
                 modifier = Modifier.layoutId("button")
-            ){
+            ) {
                 Text(text = "버튼")
             }
             Text("텍스트", Modifier.layoutId("text"))
@@ -563,5 +563,42 @@ fun ConstraintLayoutContentPreview() {
 //        ConstraintLayoutContent()
 //        LargeConstraintLayout()
         DecoupledConstraintLayout()
+    }
+}
+
+
+@Composable
+fun TwoTexts(modifier: Modifier = Modifier, text1: String, text2: String) {
+    // 이 너비에서 콘텐츠를 적절하게 그릴 수 있는 최소 높이
+    Row(modifier = modifier.height(IntrinsicSize.Min)) {
+        Text(
+            text = text1,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)
+                .wrapContentWidth(Alignment.Start)
+        )
+        Divider(
+            color = Color.Cyan, modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp)
+        )
+        Text(
+            text = text2,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)
+                .wrapContentWidth(Alignment.End)
+        )
+    }
+}
+
+@Preview
+@Composable
+fun TwoTextsPreview() {
+    JetpackComposeTestTheme {
+        Surface {
+            TwoTexts(text1 = "테스트1", text2 = "테스트2")
+        }
     }
 }
